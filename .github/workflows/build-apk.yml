@@ -70,15 +70,16 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
+          KEYSTORE_PATH="${{ github.workspace }}/apps/android/release.keystore"
           mkdir -p apps/android
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "Using release keystore from repository secrets..."
-            echo "$KEYSTORE_BASE64" | base64 --decode > apps/android/release.keystore
+            echo "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
             echo "KEYSTORE_PASS=$KEYSTORE_PASSWORD" >> $GITHUB_ENV
           else
             echo "No ANDROID_KEYSTORE_BASE64 secret found. Generating CI release keystore..."
             keytool -genkeypair -v \
-              -keystore apps/android/release.keystore \
+              -keystore "$KEYSTORE_PATH" \
               -alias daymark \
               -keyalg RSA \
               -keysize 2048 \
@@ -88,12 +89,13 @@ jobs:
               -dname "CN=Daymark, OU=Daymark, O=Daymark, L=City, S=State, C=US"
             echo "KEYSTORE_PASS=daymark_ci_keystore_pass" >> $GITHUB_ENV
           fi
+          echo "KEYSTORE_FILE=$KEYSTORE_PATH" >> $GITHUB_ENV
 
       - name: Build Android APK
         env:
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
-          CARGO_APK_RELEASE_KEYSTORE: apps/android/release.keystore
+          CARGO_APK_RELEASE_KEYSTORE: ${{ env.KEYSTORE_FILE }}
           CARGO_APK_RELEASE_KEYSTORE_PASSWORD: ${{ env.KEYSTORE_PASS }}
         run: |
           cargo apk build --package daymark-android --target aarch64-linux-android --release
