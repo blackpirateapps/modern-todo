@@ -98,7 +98,7 @@ jobs:
           CARGO_APK_RELEASE_KEYSTORE: ${{ env.KEYSTORE_FILE }}
           CARGO_APK_RELEASE_KEYSTORE_PASSWORD: ${{ env.KEYSTORE_PASS }}
         run: |
-          cargo apk build --package daymark-android --target aarch64-linux-android --release
+          cargo apk build --package daymark-android --target aarch64-linux-android --lib --release
 
       - name: Locate and Collect APK
         run: |
