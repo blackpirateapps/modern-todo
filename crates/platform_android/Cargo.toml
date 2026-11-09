@@ -1,0 +1,15 @@
+[package]
+name = "platform_android"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+domain = { path = "../domain" }
+application = { path = "../application" }
+serde.workspace = true
+serde_json.workspace = true
+time.workspace = true
+thiserror.workspace = true
+tracing.workspace = true

@@ -1,0 +1,45 @@
+[package]
+name = "daymark-android"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+default-run = "daymark-android"
+
+[lib]
+name = "daymark_android"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "daymark-android"
+path = "src/main.rs"
+
+[dependencies]
+domain = { path = "../../crates/domain" }
+application = { path = "../../crates/application" }
+storage = { path = "../../crates/storage" }
+platform_android = { path = "../../crates/platform_android" }
+time.workspace = true
+uuid.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[target.'cfg(target_os = "android")'.dependencies]
+slint = { workspace = true, features = ["backend-android-activity-06"] }
+
+[target.'cfg(not(target_os = "android"))'.dependencies]
+slint = { workspace = true }
+
+[build-dependencies]
+slint-build = "1.18"
+
+[package.metadata.android]
+package = "com.daymark.todo"
+label = "Daymark"
+target_sdk_version = 34
+build_targets = ["aarch64-linux-android"]
+
+[package.metadata.android.application]
+label = "Daymark"
+theme = "@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen"
+has_code = false

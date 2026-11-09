@@ -1,0 +1,759 @@
+export struct TaskItemData {
+    id: string,
+    title: string,
+    description: string,
+    priority: string,
+    priority_color: color,
+    completed: bool,
+    due_date: string,
+    is_overdue: bool,
+    list_name: string,
+}
+
+export struct ListItemData {
+    id: string,
+    name: string,
+    color_hex: string,
+    task_count: int,
+}
+
+component CupertinoButton inherits Rectangle {
+    in property <string> text;
+    in property <color> bg_color: #007AFF;
+    in property <color> text_color: #FFFFFF;
+    in property <bool> is_primary: true;
+    callback clicked();
+
+    background: touch.pressed ? bg_color.darker(0.15) : bg_color;
+    border-radius: 12px;
+    height: 44px;
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+
+    Text {
+        text: root.text;
+        color: root.text_color;
+        font-size: 16px;
+        font-weight: 600;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+component SegmentButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> selected: false;
+    in property <bool> dark: false;
+    callback clicked();
+
+    background: selected ? (dark ? #2C2C2E : #FFFFFF) : #00000000;
+    border-radius: 8px;
+    height: 32px;
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+
+    Text {
+        text: root.text;
+        color: selected ? (dark ? #FFFFFF : #000000) : (dark ? #8E8E93 : #6C6C70);
+        font-size: 14px;
+        font-weight: selected ? 600 : 400;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+component TabItem inherits Rectangle {
+    in property <string> icon_text;
+    in property <string> label;
+    in property <bool> active: false;
+    in property <bool> dark: false;
+    callback clicked();
+
+    background: #00000000;
+
+    TouchArea {
+        clicked => { root.clicked(); }
+    }
+
+    VerticalLayout {
+        alignment: center;
+        spacing: 2px;
+
+        Text {
+            text: root.icon_text;
+            font-size: 18px;
+            horizontal-alignment: center;
+            color: root.active ? #007AFF : (root.dark ? #8E8E93 : #8E8E93);
+        }
+
+        Text {
+            text: root.label;
+            font-size: 11px;
+            font-weight: root.active ? 600 : 500;
+            horizontal-alignment: center;
+            color: root.active ? #007AFF : (root.dark ? #8E8E93 : #8E8E93);
+        }
+    }
+}
+
+component TaskRow inherits Rectangle {
+    in property <TaskItemData> task;
+    in property <bool> dark: false;
+    callback toggle_completed();
+    callback delete_clicked();
+
+    background: dark ? #1C1C1E : #FFFFFF;
+    border-radius: 12px;
+    height: 72px;
+
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 14px;
+        spacing: 12px;
+        alignment: center;
+
+        // Circular Checkbox
+        checkbox := Rectangle {
+            width: 26px;
+            height: 26px;
+            border-radius: 13px;
+            border-width: 2px;
+            border-color: root.task.completed ? #34C759 : (root.dark ? #48484A : #C7C7CC);
+            background: root.task.completed ? #34C759 : #00000000;
+
+            TouchArea {
+                clicked => { root.toggle_completed(); }
+            }
+
+            if root.task.completed: Text {
+                text: "✓";
+                color: #FFFFFF;
+                font-size: 15px;
+                font-weight: 700;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        // Title and details
+        VerticalLayout {
+            alignment: center;
+            spacing: 4px;
+            horizontal-stretch: 1;
+
+            Text {
+                text: root.task.title;
+                font-size: 16px;
+                font-weight: 500;
+                color: root.task.completed ? (root.dark ? #636366 : #8E8E93) : (root.dark ? #FFFFFF : #000000);
+                overflow: elide;
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+
+                if root.task.priority != "none": Rectangle {
+                    height: 18px;
+                    border-radius: 4px;
+                    background: root.task.priority_color.transparentize(0.85);
+
+                    HorizontalLayout {
+                        padding-left: 6px;
+                        padding-right: 6px;
+
+                        Text {
+                            text: root.task.priority;
+                            color: root.task.priority_color;
+                            font-size: 11px;
+                            font-weight: 600;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+
+                if root.task.due_date != "": Text {
+                    text: root.task.due_date;
+                    color: root.task.is_overdue ? #FF3B30 : (root.dark ? #8E8E93 : #6C6C70);
+                    font-size: 12px;
+                    font-weight: root.task.is_overdue ? 600 : 400;
+                    vertical-alignment: center;
+                }
+
+                if root.task.list_name != "": Text {
+                    text: "• " + root.task.list_name;
+                    color: root.dark ? #8E8E93 : #8E8E93;
+                    font-size: 12px;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // Delete button
+        del_btn := Rectangle {
+            width: 32px;
+            height: 32px;
+            border-radius: 16px;
+            background: #00000000;
+
+            TouchArea {
+                clicked => { root.delete_clicked(); }
+            }
+
+            Text {
+                text: "✕";
+                color: root.dark ? #48484A : #C7C7CC;
+                font-size: 14px;
+                font-weight: 600;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+}
+
+export component AppWindow inherits Window {
+    title: "Daymark";
+    preferred-width: 400px;
+    preferred-height: 800px;
+
+    in-out property <bool> is_dark: false;
+    in-out property <int> active_tab: 0; // 0: Today, 1: Inbox, 2: Upcoming, 3: Lists
+    in-out property <string> header_title: "Today";
+    in-out property <string> header_subtitle: "Tasks for today";
+
+    in-out property <int> stat_total: 0;
+    in-out property <int> stat_completed: 0;
+    in-out property <int> stat_pending: 0;
+    in-out property <int> stat_overdue: 0;
+
+    in-out property <[TaskItemData]> task_list: [];
+    in-out property <[ListItemData]> list_items: [];
+
+    in-out property <bool> show_add_modal: false;
+    in-out property <string> new_title: "";
+    in-out property <string> new_description: "";
+    in-out property <string> selected_priority: "none";
+    in-out property <int> selected_due_offset: 0; // 0: None, 1: Today, 2: Tomorrow, 3: In 7 Days
+
+    callback task_completed_toggled(string /* id */);
+    callback task_deleted(string /* id */);
+    callback add_task_submitted(string /* title */, string /* desc */, string /* priority */, int /* due_offset */);
+    callback tab_selected(int /* index */);
+    callback refresh_requested();
+    callback create_list_submitted(string /* name */);
+
+    background: is_dark ? #000000 : #F2F2F7;
+
+    VerticalLayout {
+        padding: 0px;
+        spacing: 0px;
+
+        // Top Navigation Header
+        Rectangle {
+            height: 120px;
+            background: is_dark ? #1C1C1E : #FFFFFF;
+
+            VerticalLayout {
+                padding-left: 20px;
+                padding-right: 20px;
+                padding-top: 16px;
+                padding-bottom: 12px;
+
+                HorizontalLayout {
+                    alignment: space-between;
+
+                    VerticalLayout {
+                        spacing: 2px;
+
+                        Text {
+                            text: root.header_title;
+                            font-size: 32px;
+                            font-weight: 700;
+                            color: root.is_dark ? #FFFFFF : #000000;
+                        }
+
+                        Text {
+                            text: root.header_subtitle;
+                            font-size: 13px;
+                            color: root.is_dark ? #8E8E93 : #6C6C70;
+                        }
+                    }
+
+                    HorizontalLayout {
+                        spacing: 10px;
+                        alignment: center;
+
+                        // Dark mode toggle
+                        Rectangle {
+                            width: 36px;
+                            height: 36px;
+                            border-radius: 18px;
+                            background: root.is_dark ? #2C2C2E : #F2F2F7;
+
+                            TouchArea {
+                                clicked => { root.is_dark = !root.is_dark; }
+                            }
+
+                            Text {
+                                text: root.is_dark ? "☀️" : "🌙";
+                                font-size: 16px;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        // Add Task Button
+                        Rectangle {
+                            width: 36px;
+                            height: 36px;
+                            border-radius: 18px;
+                            background: #007AFF;
+
+                            TouchArea {
+                                clicked => {
+                                    root.new_title = "";
+                                    root.new_description = "";
+                                    root.selected_priority = "none";
+                                    root.selected_due_offset = (root.active_tab == 0) ? 1 : 0;
+                                    root.show_add_modal = true;
+                                }
+                            }
+
+                            Text {
+                                text: "+";
+                                color: #FFFFFF;
+                                font-size: 24px;
+                                font-weight: 500;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+
+                // Statistics Banner (Grouped Pills)
+                HorizontalLayout {
+                    spacing: 8px;
+                    padding-top: 10px;
+
+                    Rectangle {
+                        height: 24px;
+                        border-radius: 12px;
+                        background: #007AFF.transparentize(0.85);
+
+                        HorizontalLayout {
+                            padding-left: 10px;
+                            padding-right: 10px;
+
+                            Text {
+                                text: "Pending: " + root.stat_pending;
+                                font-size: 11px;
+                                font-weight: 600;
+                                color: #007AFF;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        height: 24px;
+                        border-radius: 12px;
+                        background: #34C759.transparentize(0.85);
+
+                        HorizontalLayout {
+                            padding-left: 10px;
+                            padding-right: 10px;
+
+                            Text {
+                                text: "Done: " + root.stat_completed;
+                                font-size: 11px;
+                                font-weight: 600;
+                                color: #34C759;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+
+                    if root.stat_overdue > 0: Rectangle {
+                        height: 24px;
+                        border-radius: 12px;
+                        background: #FF3B30.transparentize(0.85);
+
+                        HorizontalLayout {
+                            padding-left: 10px;
+                            padding-right: 10px;
+
+                            Text {
+                                text: "Overdue: " + root.stat_overdue;
+                                font-size: 11px;
+                                font-weight: 600;
+                                color: #FF3B30;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Main Content Area
+        Rectangle {
+            horizontal-stretch: 1;
+            vertical-stretch: 1;
+            background: #00000000;
+
+            if root.active_tab < 3: Flickable {
+                VerticalLayout {
+                    padding-left: 16px;
+                    padding-right: 16px;
+                    padding-top: 12px;
+                    padding-bottom: 12px;
+                    spacing: 8px;
+
+                    for task in root.task_list: TaskRow {
+                        task: task;
+                        dark: root.is_dark;
+                        toggle_completed => { root.task_completed_toggled(task.id); }
+                        delete_clicked => { root.task_deleted(task.id); }
+                    }
+
+                    if root.task_list.length == 0: VerticalLayout {
+                        alignment: center;
+                        spacing: 8px;
+                        padding-top: 80px;
+
+                        Text {
+                            text: "No tasks here";
+                            font-size: 18px;
+                            font-weight: 600;
+                            horizontal-alignment: center;
+                            color: root.is_dark ? #8E8E93 : #8E8E93;
+                        }
+
+                        Text {
+                            text: "Tap the + button above to create a task";
+                            font-size: 14px;
+                            horizontal-alignment: center;
+                            color: root.is_dark ? #636366 : #AEAEB2;
+                        }
+                    }
+                }
+            }
+
+            // Lists Tab
+            if root.active_tab == 3: Flickable {
+                VerticalLayout {
+                    padding-left: 16px;
+                    padding-right: 16px;
+                    padding-top: 12px;
+                    padding-bottom: 12px;
+                    spacing: 10px;
+
+                    for item in root.list_items: Rectangle {
+                        height: 56px;
+                        background: root.is_dark ? #1C1C1E : #FFFFFF;
+                        border-radius: 12px;
+
+                        HorizontalLayout {
+                            padding-left: 16px;
+                            padding-right: 16px;
+                            alignment: space-between;
+
+                            HorizontalLayout {
+                                spacing: 12px;
+                                alignment: center;
+
+                                Rectangle {
+                                    width: 12px;
+                                    height: 12px;
+                                    border-radius: 6px;
+                                    background: #007AFF;
+                                }
+
+                                Text {
+                                    text: item.name;
+                                    font-size: 16px;
+                                    font-weight: 500;
+                                    color: root.is_dark ? #FFFFFF : #000000;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            Text {
+                                text: item.task_count;
+                                font-size: 14px;
+                                color: root.is_dark ? #8E8E93 : #8E8E93;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Bottom Navigation Bar (Cupertino Tab Bar)
+        Rectangle {
+            height: 64px;
+            background: is_dark ? #1C1C1E : #FFFFFF;
+
+            Rectangle {
+                x: 0;
+                y: 0;
+                width: 100%;
+                height: 1px;
+                background: root.is_dark ? #2C2C2E : #E5E5EA;
+            }
+
+            HorizontalLayout {
+                alignment: space-around;
+
+                TabItem {
+                    icon_text: "☀️";
+                    label: "Today";
+                    active: root.active_tab == 0;
+                    dark: root.is_dark;
+                    clicked => { root.tab_selected(0); }
+                }
+
+                TabItem {
+                    icon_text: "📥";
+                    label: "Inbox";
+                    active: root.active_tab == 1;
+                    dark: root.is_dark;
+                    clicked => { root.tab_selected(1); }
+                }
+
+                TabItem {
+                    icon_text: "📅";
+                    label: "Upcoming";
+                    active: root.active_tab == 2;
+                    dark: root.is_dark;
+                    clicked => { root.tab_selected(2); }
+                }
+
+                TabItem {
+                    icon_text: "📁";
+                    label: "Lists";
+                    active: root.active_tab == 3;
+                    dark: root.is_dark;
+                    clicked => { root.tab_selected(3); }
+                }
+            }
+        }
+    }
+
+    // Modal Sheet for Task Creation
+    if root.show_add_modal: Rectangle {
+        background: #00000088;
+        x: 0;
+        y: 0;
+        width: 100%;
+        height: 100%;
+
+        TouchArea {
+            // Dismiss on background touch
+            clicked => { root.show_add_modal = false; }
+        }
+
+        modal_card := Rectangle {
+            width: root.width - 32px;
+            height: 380px;
+            x: 16px;
+            y: (root.height - 380px) / 2;
+            background: root.is_dark ? #1C1C1E : #FFFFFF;
+            border-radius: 16px;
+            clip: true;
+
+            VerticalLayout {
+                padding: 20px;
+                spacing: 14px;
+
+                HorizontalLayout {
+                    alignment: space-between;
+
+                    Text {
+                        text: "New Task";
+                        font-size: 20px;
+                        font-weight: 700;
+                        color: root.is_dark ? #FFFFFF : #000000;
+                    }
+
+                    Rectangle {
+                        width: 28px;
+                        height: 28px;
+                        border-radius: 14px;
+                        background: root.is_dark ? #2C2C2E : #F2F2F7;
+
+                        TouchArea {
+                            clicked => { root.show_add_modal = false; }
+                        }
+
+                        Text {
+                            text: "✕";
+                            font-size: 14px;
+                            color: root.is_dark ? #8E8E93 : #8E8E93;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+
+                // Title Input
+                Rectangle {
+                    height: 44px;
+                    border-radius: 10px;
+                    background: root.is_dark ? #2C2C2E : #F2F2F7;
+
+                    HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
+
+                        title_input := TextInput {
+                            text: root.new_title;
+                            font-size: 16px;
+                            color: root.is_dark ? #FFFFFF : #000000;
+                            vertical-alignment: center;
+                            edited => { root.new_title = self.text; }
+                        }
+                    }
+                }
+
+                // Description Input
+                Rectangle {
+                    height: 44px;
+                    border-radius: 10px;
+                    background: root.is_dark ? #2C2C2E : #F2F2F7;
+
+                    HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
+
+                        desc_input := TextInput {
+                            text: root.new_description;
+                            font-size: 14px;
+                            color: root.is_dark ? #FFFFFF : #000000;
+                            vertical-alignment: center;
+                            edited => { root.new_description = self.text; }
+                        }
+                    }
+                }
+
+                // Priority Segmented Control
+                VerticalLayout {
+                    spacing: 4px;
+
+                    Text {
+                        text: "PRIORITY";
+                        font-size: 11px;
+                        font-weight: 600;
+                        color: root.is_dark ? #8E8E93 : #8E8E93;
+                    }
+
+                    Rectangle {
+                        height: 36px;
+                        border-radius: 10px;
+                        background: root.is_dark ? #2C2C2E : #E5E5EA;
+
+                        HorizontalLayout {
+                            padding: 2px;
+                            spacing: 2px;
+
+                            SegmentButton {
+                                text: "None";
+                                selected: root.selected_priority == "none";
+                                dark: root.is_dark;
+                                clicked => { root.selected_priority = "none"; }
+                            }
+
+                            SegmentButton {
+                                text: "Low";
+                                selected: root.selected_priority == "low";
+                                dark: root.is_dark;
+                                clicked => { root.selected_priority = "low"; }
+                            }
+
+                            SegmentButton {
+                                text: "Med";
+                                selected: root.selected_priority == "medium";
+                                dark: root.is_dark;
+                                clicked => { root.selected_priority = "medium"; }
+                            }
+
+                            SegmentButton {
+                                text: "High";
+                                selected: root.selected_priority == "high";
+                                dark: root.is_dark;
+                                clicked => { root.selected_priority = "high"; }
+                            }
+                        }
+                    }
+                }
+
+                // Due Date Quick Selectors
+                VerticalLayout {
+                    spacing: 4px;
+
+                    Text {
+                        text: "SCHEDULE";
+                        font-size: 11px;
+                        font-weight: 600;
+                        color: root.is_dark ? #8E8E93 : #8E8E93;
+                    }
+
+                    Rectangle {
+                        height: 36px;
+                        border-radius: 10px;
+                        background: root.is_dark ? #2C2C2E : #E5E5EA;
+
+                        HorizontalLayout {
+                            padding: 2px;
+                            spacing: 2px;
+
+                            SegmentButton {
+                                text: "Inbox";
+                                selected: root.selected_due_offset == 0;
+                                dark: root.is_dark;
+                                clicked => { root.selected_due_offset = 0; }
+                            }
+
+                            SegmentButton {
+                                text: "Today";
+                                selected: root.selected_due_offset == 1;
+                                dark: root.is_dark;
+                                clicked => { root.selected_due_offset = 1; }
+                            }
+
+                            SegmentButton {
+                                text: "Tmrw";
+                                selected: root.selected_due_offset == 2;
+                                dark: root.is_dark;
+                                clicked => { root.selected_due_offset = 2; }
+                            }
+
+                            SegmentButton {
+                                text: "7 Days";
+                                selected: root.selected_due_offset == 3;
+                                dark: root.is_dark;
+                                clicked => { root.selected_due_offset = 3; }
+                            }
+                        }
+                    }
+                }
+
+                // Create Action Button
+                CupertinoButton {
+                    text: "Add Task";
+                    bg_color: #007AFF;
+                    clicked => {
+                        root.show_add_modal = false;
+                        root.add_task_submitted(root.new_title, root.new_description, root.selected_priority, root.selected_due_offset);
+                    }
+                }
+            }
+        }
+    }
+}

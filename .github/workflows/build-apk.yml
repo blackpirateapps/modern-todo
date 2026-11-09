@@ -1,0 +1,77 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: build-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    name: Build Android APK (Release)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android Platforms, NDK & Build Tools
+        run: |
+          yes | sdkmanager --install "platforms;android-34" "platforms;android-30" "ndk;27.0.12077973" "build-tools;34.0.0"
+
+      - name: Set up Rust with Android Target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Cargo Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-apk-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-apk-
+
+      - name: Install cargo-apk
+        run: |
+          if ! command -v cargo-apk &> /dev/null; then
+            cargo install cargo-apk --locked
+          fi
+
+      - name: Build Android APK
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+          ANDROID_NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
+        run: |
+          cargo apk build --package daymark-android --target aarch64-linux-android --release
+
+      - name: Locate and Collect APK
+        run: |
+          mkdir -p output
+          find target/ -name "*.apk" -exec cp {} output/ \;
+          ls -la output/
+
+      - name: Upload Android APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: daymark-android-apk
+          path: output/*.apk
+          if-no-files-found: error
