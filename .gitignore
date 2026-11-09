@@ -3,5 +3,7 @@
 *.db
 *.db-shm
 *.db-wal
+*.keystore
+*.jks
 output/
 .DS_Store

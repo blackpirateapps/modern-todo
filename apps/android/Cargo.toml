@@ -39,6 +39,10 @@ label = "Daymark"
 target_sdk_version = 34
 build_targets = ["aarch64-linux-android"]
 
+[package.metadata.android.signing.release]
+path = "release.keystore"
+keystore_password = ""
+
 [package.metadata.android.application]
 label = "Daymark"
 theme = "@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen"
